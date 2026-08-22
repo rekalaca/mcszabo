@@ -3,7 +3,14 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 
-const dbPath = path.join(__dirname, '../data/database.sqlite');
+const os = require('os');
+
+// Use /tmp directory on Vercel serverless to prevent read-only filesystem crash
+const isVercel = process.env.VERCEL === '1' || Boolean(process.env.VERCEL_ENV);
+const dbPath = isVercel 
+  ? path.join(os.tmpdir(), 'database.sqlite')
+  : path.join(__dirname, '../data/database.sqlite');
+
 const dataDir = path.dirname(dbPath);
 
 if (!fs.existsSync(dataDir)) {

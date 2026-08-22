@@ -23,8 +23,14 @@ app.use('/admin', express.static(path.join(__dirname, '../public/admin')));
 app.use('/pictures', express.static(path.join(__dirname, '../public/pictures')));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Ensure Uploads Directory exists
-const uploadDir = path.join(__dirname, '../uploads');
+const os = require('os');
+const isVercel = process.env.VERCEL === '1' || Boolean(process.env.VERCEL_ENV);
+
+// Ensure Uploads Directory exists (use /tmp on Vercel serverless)
+const uploadDir = isVercel
+  ? path.join(os.tmpdir(), 'uploads')
+  : path.join(__dirname, '../uploads');
+
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -475,20 +481,41 @@ app.get('/api/admin/stats/export', authenticateToken, async (req, res) => {
   }
 });
 
+// Lazy DB init for Vercel serverless requests
+let dbInitialized = false;
+let dbInitPromise = null;
+
+app.use(async (req, res, next) => {
+  if (!dbInitialized) {
+    if (!dbInitPromise) {
+      dbInitPromise = initDatabase().then(() => {
+        dbInitialized = true;
+      }).catch(err => {
+        console.error('Failed to initialize database on request:', err);
+      });
+    }
+    await dbInitPromise;
+  }
+  next();
+});
+
 // Default redirect for root
 app.get('/', (req, res) => {
   res.redirect('/admin');
 });
 
-// Initialize DB and start server
-initDatabase().then(() => {
-  app.listen(PORT, () => {
-    console.log(`====================================================`);
-    console.log(` KisSzabó Kft. Job App Server Running!`);
-    console.log(` Admin Portal:  http://localhost:${PORT}/admin`);
-    console.log(` Embed Script:  http://localhost:${PORT}/embed/kisszabo-form.js`);
-    console.log(`====================================================`);
+if (!isVercel) {
+  initDatabase().then(() => {
+    app.listen(PORT, () => {
+      console.log(`====================================================`);
+      console.log(` KisSzabó Kft. Job App Server Running!`);
+      console.log(` Admin Portal:  http://localhost:${PORT}/admin`);
+      console.log(` Embed Script:  http://localhost:${PORT}/embed/kisszabo-form.js`);
+      console.log(`====================================================`);
+    });
+  }).catch(err => {
+    console.error('Failed to initialize database:', err);
   });
-}).catch(err => {
-  console.error('Failed to initialize database:', err);
-});
+}
+
+module.exports = app;
