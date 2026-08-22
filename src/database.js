@@ -18,16 +18,18 @@ if (!fs.existsSync(dataDir)) {
 }
 
 let db = null;
-let useSqlJs = false;
+let useSqlJs = isVercel;
 let SQL = null;
 let sqlJsDb = null;
 
-try {
-  const sqlite3 = require('sqlite3').verbose();
-  db = new sqlite3.Database(dbPath);
-} catch (e) {
-  console.warn('[DB NOTICE] Native sqlite3 binding unavailable, initializing sql.js WASM driver:', e.message);
-  useSqlJs = true;
+if (!useSqlJs) {
+  try {
+    const sqlite3 = require('sqlite3').verbose();
+    db = new sqlite3.Database(dbPath);
+  } catch (e) {
+    console.warn('[DB NOTICE] Native sqlite3 binding unavailable, initializing sql.js WASM driver:', e.message);
+    useSqlJs = true;
+  }
 }
 
 async function initSqlJs() {
@@ -117,6 +119,12 @@ async function allAsync(sql, params = []) {
     const rows = [];
     while (stmt.step()) {
       rows.push(stmt.getAsObject());
+    }
+    stmt.free();
+    return rows;
+  }
+}
+
 function execAsync(sql) {
   if (!useSqlJs && db) {
     return new Promise((resolve, reject) => {
