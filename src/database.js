@@ -117,51 +117,51 @@ async function allAsync(sql, params = []) {
     const rows = [];
     while (stmt.step()) {
       rows.push(stmt.getAsObject());
-    }
-    stmt.free();
-    return rows;
+function execAsync(sql) {
+  if (!useSqlJs && db) {
+    return new Promise((resolve, reject) => {
+      db.exec(sql, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  } else {
+    return (async () => {
+      await initSqlJs();
+      sqlJsDb.exec(sql);
+      saveSqlJsDb();
+    })();
   }
 }
 
 async function initDatabase() {
   if (!useSqlJs && db) db.serialize();
 
-  // Create Restaurants Table
-  await runAsync(`
+  // Create All Tables Atomically
+  await execAsync(`
     CREATE TABLE IF NOT EXISTS restaurants (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       code TEXT UNIQUE NOT NULL,
       address TEXT,
       active INTEGER DEFAULT 1
-    )
-  `);
+    );
 
-  // Create Job Positions Table
-  await runAsync(`
     CREATE TABLE IF NOT EXISTS positions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
       code TEXT UNIQUE NOT NULL,
       description TEXT,
       active INTEGER DEFAULT 1
-    )
-  `);
+    );
 
-  // Create Active Position Matrix Table (Restaurant x Position)
-  await runAsync(`
     CREATE TABLE IF NOT EXISTS restaurant_positions (
       restaurant_id INTEGER NOT NULL,
       position_id INTEGER NOT NULL,
       is_open INTEGER DEFAULT 1,
-      PRIMARY KEY (restaurant_id, position_id),
-      FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
-      FOREIGN KEY (position_id) REFERENCES positions(id) ON DELETE CASCADE
-    )
-  `);
+      PRIMARY KEY (restaurant_id, position_id)
+    );
 
-  // Create Applications Table
-  await runAsync(`
     CREATE TABLE IF NOT EXISTS applications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       form_type TEXT DEFAULT 'standard',
@@ -177,19 +177,14 @@ async function initDatabase() {
       cv_filename TEXT NOT NULL,
       cv_original_name TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      status TEXT DEFAULT 'uj',
-      FOREIGN KEY (restaurant_id) REFERENCES restaurants(id),
-      FOREIGN KEY (position_id) REFERENCES positions(id)
-    )
-  `);
+      status TEXT DEFAULT 'uj'
+    );
 
-  // Create Admin Users Table
-  await runAsync(`
     CREATE TABLE IF NOT EXISTS admin_users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL
-    )
+    );
   `);
 
   // Seed default data if empty or sync
