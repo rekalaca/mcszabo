@@ -161,7 +161,7 @@ app.get('/api/public/config', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching public config:', error);
-    res.status(500).json({ error: 'Szerver hiba az adatok lekérésekor!', details: error.message, stack: error.stack });
+    res.status(500).json({ error: 'Szerver hiba az adatok lekérésekor!' });
   }
 });
 
