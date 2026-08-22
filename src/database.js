@@ -19,7 +19,7 @@ let useMemoryStore = isVercel;
 let SQL = null;
 let sqlJsDb = null;
 
-// Pure JS in-memory store for Vercel fallback
+// Pure JS in-memory store for Vercel serverless environment
 const memoryDb = {
   restaurants: [
     { id: 1, name: "Nyíregyháza belvárosi McDonald's", code: 'nyiregyhaza_belvaros', address: '4400 Nyíregyháza, Dózsa György út 1.', active: 1 },
@@ -43,14 +43,14 @@ const memoryDb = {
   admin_users: []
 };
 
-// Populate default matrix for memoryDb (all positions open for all restaurants)
+// Populate default matrix for memoryDb (all 8 positions open for 5 restaurants)
 for (let r = 1; r <= 5; r++) {
   for (let p = 1; p <= 8; p++) {
     memoryDb.restaurant_positions.push({ restaurant_id: r, position_id: p, is_open: 1 });
   }
 }
 
-if (!useSqlJs) {
+if (!useMemoryStore) {
   try {
     const sqlite3 = require('sqlite3').verbose();
     db = new sqlite3.Database(dbPath);
@@ -100,19 +100,7 @@ function saveSqlJsDb() {
 }
 
 async function runAsync(sql, params = []) {
-  if (!useSqlJs && db) {
-    return new Promise((resolve, reject) => {
-      db.run(sql, params, function (err) {
-        if (err) reject(err);
-        else resolve(this);
-      });
-    });
-  }
-  
-  await initSqlJs();
-
-  if (useMemoryStore || !sqlJsDb) {
-    // Memory store fallback for writes
+  if (useMemoryStore) {
     const sqlLower = sql.toLowerCase().trim();
     if (sqlLower.startsWith('insert into applications')) {
       const newApp = {
@@ -149,6 +137,19 @@ async function runAsync(sql, params = []) {
     return { lastID: 1, changes: 1 };
   }
 
+  if (!useSqlJs && db) {
+    return new Promise((resolve, reject) => {
+      db.run(sql, params, function (err) {
+        if (err) reject(err);
+        else resolve(this);
+      });
+    });
+  }
+
+  await initSqlJs();
+
+  if (!sqlJsDb) return { lastID: 1, changes: 1 };
+
   try {
     sqlJsDb.run(sql, params);
     saveSqlJsDb();
@@ -161,30 +162,20 @@ async function runAsync(sql, params = []) {
     } catch(e) {}
     return { lastID, changes: 1 };
   } catch (err) {
-    console.error('SQL.JS Run Error:', err.message);
     return { lastID: 1, changes: 0 };
   }
 }
 
 async function getAsync(sql, params = []) {
-  if (!useSqlJs && db) {
-    return new Promise((resolve, reject) => {
-      db.get(sql, params, (err, row) => {
-        if (err) reject(err);
-        else resolve(row);
-      });
-    });
-  }
-
-  await initSqlJs();
-
-  if (useMemoryStore || !sqlJsDb) {
+  if (useMemoryStore) {
     const sqlLower = sql.toLowerCase().trim();
     if (sqlLower.includes('from restaurants')) {
-      return { count: memoryDb.restaurants.length, name: (memoryDb.restaurants.find(r => r.id === params[0]) || {}).name || '' };
+      const rest = memoryDb.restaurants.find(r => r.id === params[0]);
+      return { count: memoryDb.restaurants.length, name: rest ? rest.name : '' };
     }
     if (sqlLower.includes('from positions')) {
-      return { count: memoryDb.positions.length, title: (memoryDb.positions.find(p => p.id === params[0]) || {}).title || '' };
+      const pos = memoryDb.positions.find(p => p.id === params[0]);
+      return { count: memoryDb.positions.length, title: pos ? pos.title : '' };
     }
     if (sqlLower.includes('from admin_users')) {
       const user = params[0];
@@ -199,6 +190,19 @@ async function getAsync(sql, params = []) {
     }
     return { count: 0 };
   }
+
+  if (!useSqlJs && db) {
+    return new Promise((resolve, reject) => {
+      db.get(sql, params, (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+  }
+
+  await initSqlJs();
+
+  if (!sqlJsDb) return null;
 
   try {
     const stmt = sqlJsDb.prepare(sql);
@@ -215,18 +219,7 @@ async function getAsync(sql, params = []) {
 }
 
 async function allAsync(sql, params = []) {
-  if (!useSqlJs && db) {
-    return new Promise((resolve, reject) => {
-      db.all(sql, params, (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    });
-  }
-
-  await initSqlJs();
-
-  if (useMemoryStore || !sqlJsDb) {
+  if (useMemoryStore) {
     const sqlLower = sql.toLowerCase().trim();
     if (sqlLower.includes('from restaurants')) {
       return memoryDb.restaurants;
@@ -251,6 +244,19 @@ async function allAsync(sql, params = []) {
     return [];
   }
 
+  if (!useSqlJs && db) {
+    return new Promise((resolve, reject) => {
+      db.all(sql, params, (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    });
+  }
+
+  await initSqlJs();
+
+  if (!sqlJsDb) return [];
+
   try {
     const stmt = sqlJsDb.prepare(sql);
     stmt.bind(params);
@@ -266,6 +272,8 @@ async function allAsync(sql, params = []) {
 }
 
 function execAsync(sql) {
+  if (useMemoryStore) return Promise.resolve();
+
   if (!useSqlJs && db) {
     return new Promise((resolve, reject) => {
       db.exec(sql, (err) => {
@@ -286,6 +294,8 @@ function execAsync(sql) {
 }
 
 async function initDatabase() {
+  if (useMemoryStore) return;
+
   if (!useSqlJs && db) db.serialize();
 
   await execAsync(`
