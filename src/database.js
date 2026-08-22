@@ -35,7 +35,10 @@ if (!useSqlJs) {
 async function initSqlJs() {
   if (!SQL) {
     const initSqlJsLib = require('sql.js');
-    SQL = await initSqlJsLib();
+    const wasmPath = path.join(process.cwd(), 'node_modules/sql.js/dist');
+    SQL = await initSqlJsLib({
+      locateFile: file => path.join(wasmPath, file)
+    });
   }
   if (!sqlJsDb) {
     if (fs.existsSync(dbPath)) {
