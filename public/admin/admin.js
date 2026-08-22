@@ -76,6 +76,26 @@
   const navItems = document.querySelectorAll('.nav-item');
   const tabContents = document.querySelectorAll('.tab-content');
 
+  // Mobile Drawer Toggle Handlers
+  const mobileToggleBtn = document.getElementById('mobile-menu-toggle-btn');
+  const closeSidebarBtn = document.getElementById('close-sidebar-btn');
+  const sidebarOverlay = document.getElementById('sidebar-overlay');
+  const adminSidebar = document.getElementById('admin-sidebar');
+
+  function openMobileMenu() {
+    if (adminSidebar) adminSidebar.classList.add('mobile-open');
+    if (sidebarOverlay) sidebarOverlay.classList.add('active');
+  }
+
+  function closeMobileMenu() {
+    if (adminSidebar) adminSidebar.classList.remove('mobile-open');
+    if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+  }
+
+  if (mobileToggleBtn) mobileToggleBtn.addEventListener('click', openMobileMenu);
+  if (closeSidebarBtn) closeSidebarBtn.addEventListener('click', closeMobileMenu);
+  if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeMobileMenu);
+
   navItems.forEach(item => {
     item.addEventListener('click', () => {
       const targetTab = item.dataset.tab;
@@ -84,6 +104,9 @@
 
       item.classList.add('active');
       document.getElementById(`tab-${targetTab}`).classList.add('active');
+
+      // Close mobile menu on navigation
+      closeMobileMenu();
     });
   });
 
@@ -157,9 +180,12 @@
           is_open: isOpen
         })
       });
-      if (!response.ok) throw new Error('Nem sikerült frissíteni a pozíciót');
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Nem sikerült frissíteni a pozíciót');
+      }
     } catch (err) {
-      alert('Hiba történt a pozíció frissítésekor: ' + err.message);
+      showAdminAlertModal({ type: 'error', title: 'Hiba a módosításkor', message: 'Hiba történt a pozíció frissítésekor: ' + err.message });
       loadMatrixData(); // revert UI on failure
     }
   };

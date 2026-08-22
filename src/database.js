@@ -97,7 +97,7 @@ async function runAsync(sql, params = []) {
   if (usePostgres && pgPool) {
     let pgSql = adaptSqlForPg(sql);
     const isInsert = pgSql.trim().toUpperCase().startsWith('INSERT INTO');
-    if (isInsert && !pgSql.toUpperCase().includes('RETURNING')) {
+    if (isInsert && !pgSql.toUpperCase().includes('RETURNING') && !pgSql.toLowerCase().includes('restaurant_positions')) {
       pgSql += ' RETURNING id';
     }
     const res = await pgPool.query(pgSql, params);

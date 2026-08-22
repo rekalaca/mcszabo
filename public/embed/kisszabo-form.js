@@ -338,7 +338,11 @@
 
   // Global helper to show simple GDPR modal if clicked
   window.openAdatkezelésiModal = function () {
-    alert('ADATKEZELÉSI TÁJÉKOZTATÓ (KisSzabó Kft.)\n\nA megadott személyes adatokat kizárólag a munkaerő-toborzás és kiválasztás céljából kezeljük a GDPR előírásainak megfelelően. Az adatokat harmadik félnek nem adjuk át, és a jelentkezési folyamat lezárulását követően bizalmasan tároljuk vagy kérésre töröljük.');
+    showKsModal(
+      'warning',
+      'Adatkezelési Tájékoztató',
+      '<strong>KisSzabó Kft. (McDonald\'s Franchisee)</strong><br><br>A megadott személyes adatokat kizárólag a munkaerő-toborzás és kiválasztás céljából kezeljük a hatályos GDPR és adatvédelmi előírásoknak megfelelően. Az adatokat harmadik félnek nem adjuk át, és a jelentkezési folyamat lezárulását követően bizalmasan tároljuk vagy töröljük.'
+    );
   };
 
   // Auto-initialize when DOM is ready

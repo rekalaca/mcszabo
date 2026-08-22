@@ -34,14 +34,31 @@
 
   <!-- MAIN ADMIN DASHBOARD (AFTER LOGIN) -->
   <div id="dashboard-screen" class="admin-dashboard-wrap" style="display: none;">
+    <!-- MOBILE TOP BAR -->
+    <header class="admin-mobile-header">
+      <button id="mobile-menu-toggle-btn" class="mobile-menu-btn" aria-label="Menü megnyitása">
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+      </button>
+      <div class="mobile-brand-title">
+        <img src="/pictures/work.png" class="mobile-logo-img" alt="Logo">
+        <span>KisSzabó HR Admin</span>
+      </div>
+    </header>
+
+    <!-- BACKDROP OVERLAY FOR MOBILE SIDEBAR -->
+    <div id="sidebar-overlay" class="sidebar-backdrop"></div>
+
     <!-- SIDEBAR NAVIGATION -->
-    <aside class="admin-sidebar">
+    <aside class="admin-sidebar" id="admin-sidebar">
       <div class="sidebar-brand">
         <img src="/pictures/work.png" class="brand-badge-img" alt="KisSzabó Kft. Logo">
         <div>
           <h3>KisSzabó HR</h3>
           <span class="brand-subtitle">McDonald's Franchisee</span>
         </div>
+        <button id="close-sidebar-btn" class="sidebar-close-btn" aria-label="Menü bezárása">✕</button>
       </div>
 
       <nav class="sidebar-nav">
