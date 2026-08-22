@@ -3,7 +3,8 @@ const fs = require('fs');
 const os = require('os');
 const bcrypt = require('bcryptjs');
 
-const isVercel = process.env.VERCEL === '1' || Boolean(process.env.VERCEL_ENV);
+// Detect Vercel serverless environment (AWS_REGION is set on Vercel lambdas e.g. fra1)
+const isVercel = Boolean(process.env.VERCEL || process.env.VERCEL_ENV || process.env.VERCEL_REGION || process.env.AWS_REGION);
 const dbPath = isVercel 
   ? path.join(os.tmpdir(), 'database.sqlite')
   : path.join(__dirname, '../data/database.sqlite');
