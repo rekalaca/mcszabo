@@ -225,15 +225,43 @@
           <td style="font-size: 13px;">📧 ${escapeHtml(a.email)}<br>📞 ${escapeHtml(a.phone)}</td>
           <td style="font-size: 13px;">${escapeHtml(a.education_level)}</td>
           <td style="text-align: center;">${a.is_student ? '✅ Igen' : '❌ Nem'}</td>
-          <td>
-            <a href="/uploads/${a.cv_filename}" target="_blank" class="admin-btn secondary" style="padding: 4px 10px; font-size: 12px; text-decoration: none;">
-              📥 CV megtekintése
-            </a>
+          <td style="white-space: nowrap;">
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <a href="/uploads/${a.cv_filename}" target="_blank" class="admin-btn secondary" style="padding: 4px 8px; font-size: 12px; text-decoration: none;" title="Önéletrajz megnyitása">
+                📥 CV
+              </a>
+              <button onclick="window.deleteApplication(${a.id}, '${escapeHtml(a.full_name)}')" class="admin-btn" style="background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 4px 8px; font-size: 12px;" title="Jelentkezés törlése">
+                🗑️ Törlés
+              </button>
+            </div>
           </td>
         </tr>
       `;
     }).join('');
   }
+
+  // Global Delete Handler
+  window.deleteApplication = async function(id, name) {
+    if (!confirm(`Biztosan véglegesen törölni szeretné ${name || 'ezt a'} jelentkezést?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/admin/applications/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        loadApplications();
+        if (typeof loadStats === 'function') loadStats();
+      } else {
+        alert(data.error || 'Hiba történt a törlés során!');
+      }
+    } catch (err) {
+      alert('Hálózati hiba a törlés során: ' + err.message);
+    }
+  };
 
   document.getElementById('apply-filters-btn').addEventListener('click', loadApplications);
   const refreshAppsBtn = document.getElementById('refresh-applications-btn');

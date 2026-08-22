@@ -475,6 +475,33 @@ app.get('/api/admin/applications', authenticateToken, async (req, res) => {
   }
 });
 
+// Delete Application (Protected)
+app.delete('/api/admin/applications/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const appRecord = await getAsync(`SELECT cv_filename FROM applications WHERE id = ?`, [parseInt(id, 10)]);
+    if (!appRecord) {
+      return res.status(404).json({ error: 'Jelentkezés nem található!' });
+    }
+
+    // Delete from DB
+    await runAsync(`DELETE FROM applications WHERE id = ?`, [parseInt(id, 10)]);
+
+    // Try to remove local file if present
+    if (appRecord.cv_filename) {
+      const diskPath = path.join(uploadDir, appRecord.cv_filename);
+      if (fs.existsSync(diskPath)) {
+        try { fs.unlinkSync(diskPath); } catch (e) {}
+      }
+    }
+
+    res.json({ success: true, message: 'Jelentkezés sikeresen törölve!' });
+  } catch (error) {
+    console.error('Error deleting application:', error);
+    res.status(500).json({ error: 'Hiba a jelentkezés törlésekor!' });
+  }
+});
+
 // Monthly Statistics Aggregation
 app.get('/api/admin/stats', authenticateToken, async (req, res) => {
   try {
