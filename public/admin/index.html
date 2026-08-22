@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adminisztrációs Portál - KisSzabó Kft. HR</title>
+  <link rel="stylesheet" href="/admin/admin.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cardo:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen" class="admin-login-wrap">
+    <div class="admin-login-card">
+      <img src="/pictures/work.png" class="admin-logo-img" alt="KisSzabó Kft. Logo">
+      <h2>KisSzabó Kft. Admin</h2>
+      <p>Lépjen be az állásbörze és nyitott pozíciók kezeléséhez!</p>
+
+      <div id="login-alert"></div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label>Felhasználónév</label>
+          <input type="text" id="login-username" class="admin-input" value="admin" required>
+        </div>
+        <div class="form-group">
+          <label>Jelszó</label>
+          <input type="password" id="login-password" class="admin-input" value="adminpass" required>
+        </div>
+        <button type="submit" class="admin-btn primary full-width">Bejelentkezés</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN ADMIN DASHBOARD (AFTER LOGIN) -->
+  <div id="dashboard-screen" class="admin-dashboard-wrap" style="display: none;">
+    <!-- SIDEBAR NAVIGATION -->
+    <aside class="admin-sidebar">
+      <div class="sidebar-brand">
+        <img src="/pictures/work.png" class="brand-badge-img" alt="KisSzabó Kft. Logo">
+        <div>
+          <h3>KisSzabó HR</h3>
+          <span class="brand-subtitle">McDonald's Franchisee</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-tab="matrix">
+          <span class="nav-icon">📊</span> Nyitott Pozíciók (Mátrix)
+        </button>
+        <button class="nav-item" data-tab="applications">
+          <span class="nav-icon">📁</span> Jelentkezések
+        </button>
+        <button class="nav-item" data-tab="stats">
+          <span class="nav-icon">📈</span> Statisztika & Export
+        </button>
+        <button class="nav-item" data-tab="embed">
+          <span class="nav-icon">⚡</span> WordPress Beágyazás
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-info">Bejelentkezve: <strong id="admin-user-name">admin</strong></div>
+        <button id="logout-btn" class="admin-btn outline-sm">Kijelentkezés</button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="admin-main">
+      <!-- TAB 1: MATRIX (OPEN POSITIONS PER RESTAURANT) -->
+      <section id="tab-matrix" class="tab-content active">
+        <div class="page-header">
+          <div>
+            <h2>Nyitott Pozíciók Kezelése (Mátrix)</h2>
+            <p>Heti szinten kapcsolható, hogy az 5 étterem közül melyikben melyik munkakörre lehet jelentkezni.</p>
+          </div>
+          <button id="refresh-matrix-btn" class="admin-btn secondary">🔄 Frissítés</button>
+        </div>
+
+        <div class="card shadow">
+          <div class="table-responsive">
+            <table class="admin-table matrix-table" id="matrix-table">
+              <thead>
+                <!-- Populated dynamically -->
+              </thead>
+              <tbody>
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: APPLICATIONS LIST -->
+      <section id="tab-applications" class="tab-content">
+        <div class="page-header">
+          <div>
+            <h2>Beérkezett Jelentkezések</h2>
+            <p>Böngéssze és keresse a beküldött önéletrajzokat étterem, munkakör vagy név alapján.</p>
+          </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="card filter-bar">
+          <div class="filter-grid">
+            <input type="text" id="filter-search" class="admin-input" placeholder="🔍 Keresés név, email vagy telefon alapján...">
+            
+            <select id="filter-restaurant" class="admin-select">
+              <option value="">Összes Étterem</option>
+            </select>
+
+            <select id="filter-position" class="admin-select">
+              <option value="">Összes Munkakör</option>
+            </select>
+
+            <select id="filter-formtype" class="admin-select">
+              <option value="">Minden típus</option>
+              <option value="standard">Normál jelentkezés</option>
+              <option value="disability">Megváltozott munkaképességű</option>
+            </select>
+
+            <button id="apply-filters-btn" class="admin-btn primary">Szűrés</button>
+          </div>
+        </div>
+
+        <!-- Applications Table -->
+        <div class="card shadow">
+          <div class="table-responsive">
+            <table class="admin-table" id="applications-table">
+              <thead>
+                <tr>
+                  <th>Időpont</th>
+                  <th>Név</th>
+                  <th>Étterem</th>
+                  <th>Munkakör</th>
+                  <th>Elérhetőség</th>
+                  <th>Végzettség</th>
+                  <th>Diák?</th>
+                  <th>Önéletrajz</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: STATISTICS & CSV EXPORT -->
+      <section id="tab-stats" class="tab-content">
+        <div class="page-header">
+          <div>
+            <h2>Havi Statisztikák & CSV Export</h2>
+            <p>Kövesse nyomon a jelentkezések havi megoszlását és töltse le a havi kimutatásokat Excel formátumban.</p>
+          </div>
+        </div>
+
+        <div class="stats-overview-grid">
+          <div class="stat-card">
+            <div class="stat-title">Összes Jelentkezés</div>
+            <div class="stat-value" id="stat-total-count">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-title">Legnépszerűbb Étterem</div>
+            <div class="stat-value" id="stat-top-restaurant">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-title">Legnépszerűbb Munkakör</div>
+            <div class="stat-value" id="stat-top-position">-</div>
+          </div>
+        </div>
+
+        <div class="grid-2col" style="margin-top: 24px;">
+          <!-- Monthly Summary & Export -->
+          <div class="card">
+            <h3>Havi Bontású Kimutatás</h3>
+            <table class="admin-table" id="monthly-stats-table">
+              <thead>
+                <tr>
+                  <th>Hónap</th>
+                  <th>Normál</th>
+                  <th>Megváltozott</th>
+                  <th>Összesen</th>
+                  <th>CSV Letöltés</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Restaurant Breakdown -->
+          <div class="card">
+            <h3>Éttermenkénti Megoszlás</h3>
+            <table class="admin-table" id="restaurant-stats-table">
+              <thead>
+                <tr>
+                  <th>Étterem</th>
+                  <th>Jelentkezések száma</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: EMBED CODE GENERATOR -->
+      <section id="tab-embed" class="tab-content">
+        <div class="page-header">
+          <div>
+            <h2>WordPress Beágyazási Kódok</h2>
+            <p>Másolja ki az alábbi kódrészletet és illessze be a WordPress Elementor, Gutenberg vagy HTML moduljába.</p>
+          </div>
+        </div>
+
+        <div class="card shadow">
+          <h3>1. Normál Karrier Oldal Beágyazása</h3>
+          <p style="color: #666; font-size: 14px;">Helyezze el ezt a kódot a normál álláslehetőség aloldalon:</p>
+          <pre class="code-block"><code id="code-snippet-standard">&lt;!-- KisSzabó Kft. Normál Jelentkezési Form --&gt;
+&lt;div id="kisszabo-job-form" data-form-type="standard"&gt;&lt;/div&gt;
+&lt;script src="http://localhost:3000/embed/kisszabo-form.js"&gt;&lt;/script&gt;</code></pre>
+          <button class="admin-btn secondary" onclick="navigator.clipboard.writeText(document.getElementById('code-snippet-standard').innerText); alert('Kód másolva!');">📋 Kód Másolása</button>
+        </div>
+
+        <div class="card shadow" style="margin-top: 24px;">
+          <h3>2. Megváltozott Munkaképességű Oldal Beágyazása</h3>
+          <p style="color: #666; font-size: 14px;">Helyezze el ezt a kódot a specifikus aloldalon (munkalehetoseg-megvaltozott-munkakepesseggel-elok-szamara):</p>
+          <pre class="code-block"><code id="code-snippet-disability">&lt;!-- KisSzabó Kft. Megváltozott Munkaképességű Form --&gt;
+&lt;div id="kisszabo-job-form" data-form-type="disability"&gt;&lt;/div&gt;
+&lt;script src="http://localhost:3000/embed/kisszabo-form.js"&gt;&lt;/script&gt;</code></pre>
+          <button class="admin-btn secondary" onclick="navigator.clipboard.writeText(document.getElementById('code-snippet-disability').innerText); alert('Kód másolva!');">📋 Kód Másolása</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/admin/admin.js"></script>
+</body>
+</html>

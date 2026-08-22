@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WordPress Oldal Beágyazás Demó - KisSzabó Kft.</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cardo:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Cardo', Georgia, 'Times New Roman', serif;
+      background-color: #F7F8F9;
+      margin: 0;
+      padding: 0;
+      color: #222;
+    }
+    .wp-header {
+      background: #DC0109;
+      color: #FFBC0D;
+      padding: 24px 20px;
+      text-align: center;
+      border-bottom: 4px solid #DFC15E;
+    }
+    .wp-header h1 {
+      margin: 0 0 8px 0;
+      font-size: 28px;
+    }
+    .wp-header p {
+      margin: 0;
+      color: #ffffff;
+      font-size: 15px;
+    }
+    .wp-container {
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 0 20px;
+    }
+    .wp-tabs {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+    .wp-tab-btn {
+      padding: 14px 28px;
+      background: #eaeaea;
+      color: #333333;
+      border: 1px solid #DFC15E;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Cardo', Georgia, serif;
+      font-weight: 700;
+      font-size: 17px;
+      transition: all 0.2s ease;
+    }
+    .wp-tab-btn.active {
+      background: #DC0109;
+      color: #FFBC0D;
+      border-color: #DC0109;
+      box-shadow: 0 4px 14px rgba(220, 1, 9, 0.3);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="wp-header">
+    <h1>KisSzabó Kft. WordPress Karrier Aloldal (Demó Beágyazás)</h1>
+    <p>Így jelenik meg az űrlap a meglévő kisszabo.hu WordPress honlapba beillesztve</p>
+  </div>
+
+  <div class="wp-container">
+    <div class="wp-tabs">
+      <button class="wp-tab-btn active" onclick="switchForm('standard')">1. Normál Jelentkezési Form</button>
+      <button class="wp-tab-btn" onclick="switchForm('disability')">2. Megváltozott Munkaképességű Form</button>
+    </div>
+
+    <!-- Embedded Form Container -->
+    <div id="kisszabo-job-form" data-form-type="standard"></div>
+  </div>
+
+  <script src="/embed/kisszabo-form.js"></script>
+  <script>
+    function switchForm(type) {
+      document.querySelectorAll('.wp-tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+
+      const container = document.getElementById('kisszabo-job-form');
+      container.setAttribute('data-form-type', type);
+      delete container.dataset.initialized;
+      
+      // Re-trigger widget init
+      const script = document.createElement('script');
+      script.src = '/embed/kisszabo-form.js';
+      document.body.appendChild(script);
+    }
+  </script>
+
+</body>
+</html>

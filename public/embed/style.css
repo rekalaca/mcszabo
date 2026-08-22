@@ -1,0 +1,340 @@
+/* Kisszabó Kft. Job Application Embedded Form Styles */
+@import url('https://fonts.googleapis.com/css2?family=Cardo:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+:root {
+  --mcd-red: #DC0109;
+  --mcd-yellow: #FFBC0D;
+  --mcd-gold: #DFC15E;
+  --mcd-dark: #222222;
+  --mcd-light-bg: #FBF8F8;
+  --mcd-card-bg: #ffffff;
+  --mcd-border: #EAEAEA;
+  --mcd-text: #222222;
+  --mcd-muted: #7A7A7A;
+  --mcd-radius: 8px;
+  --mcd-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+.ks-form-container {
+  font-family: 'Cardo', Georgia, 'Times New Roman', serif;
+  max-width: 760px;
+  margin: 0 auto;
+  background: var(--mcd-card-bg);
+  border-radius: var(--mcd-radius);
+  box-shadow: var(--mcd-shadow);
+  border: 2px solid var(--mcd-gold);
+  padding: 36px 32px;
+  color: var(--mcd-text);
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+}
+
+.ks-form-container * {
+  box-sizing: border-box;
+}
+
+.ks-form-header {
+  border-bottom: 2px solid #f1f5f9;
+  padding-bottom: 20px;
+  margin-bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.ks-form-badge-img {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 2px solid var(--mcd-gold);
+  box-shadow: 0 4px 12px rgba(220, 1, 9, 0.2);
+  flex-shrink: 0;
+}
+
+.ks-form-badge {
+  background: linear-gradient(135deg, var(--mcd-red) 0%, #b81d13 100%);
+  color: white;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 22px;
+  box-shadow: 0 4px 12px rgba(218, 41, 28, 0.3);
+  flex-shrink: 0;
+}
+
+.ks-form-header-text h2 {
+  margin: 0;
+  font-size: 25px;
+  font-weight: 700;
+  color: var(--mcd-dark);
+}
+
+.ks-form-header-text p {
+  margin: 4px 0 0 0;
+  font-size: 16px;
+  color: var(--mcd-muted);
+}
+
+/* Form Layout */
+.ks-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+
+.ks-col-full {
+  grid-column: 1 / -1;
+}
+
+.ks-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ks-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--mcd-dark);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ks-label .required {
+  color: var(--mcd-red);
+}
+
+.ks-input, .ks-select, .ks-textarea {
+  width: 100%;
+  padding: 14px 18px;
+  border: 1px solid var(--mcd-border);
+  border-radius: 8px;
+  font-size: 17px;
+  font-family: inherit;
+  color: var(--mcd-text);
+  background-color: #fafafa;
+  transition: all 0.2s ease;
+}
+
+.ks-input:focus, .ks-select:focus, .ks-textarea:focus {
+  outline: none;
+  border-color: var(--mcd-red);
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(218, 41, 28, 0.12);
+}
+
+/* Radio Cards Grid for Positions */
+.ks-positions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.ks-radio-card {
+  position: relative;
+}
+
+.ks-radio-card input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.ks-radio-card-label {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border: 1px solid var(--mcd-border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--mcd-text);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.ks-radio-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  margin-right: 10px;
+  display: inline-block;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.ks-radio-card input[type="radio"]:checked + .ks-radio-card-label {
+  border-color: var(--mcd-red);
+  background: #fff5f5;
+  color: var(--mcd-red);
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(218, 41, 28, 0.1);
+}
+
+.ks-radio-card input[type="radio"]:checked + .ks-radio-card-label .ks-radio-indicator {
+  border-color: var(--mcd-red);
+  background: var(--mcd-red);
+  box-shadow: inset 0 0 0 3px #ffffff;
+}
+
+/* Student Status Radio buttons inline */
+.ks-inline-radios {
+  display: flex;
+  gap: 24px;
+  margin-top: 6px;
+}
+
+/* File Upload Button Styling */
+.ks-file-upload {
+  border: 2px dashed var(--mcd-border);
+  border-radius: 10px;
+  padding: 22px;
+  text-align: center;
+  background: #fafafa;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 16px;
+}
+
+.ks-file-upload:hover {
+  border-color: var(--mcd-red);
+  background: #fffcfc;
+}
+
+.ks-file-upload input[type="file"] {
+  display: none;
+}
+
+.ks-file-upload-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+  color: var(--mcd-muted);
+}
+
+.ks-file-name {
+  margin-top: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--mcd-red);
+}
+
+/* Honeypot field (hidden from humans, visible to bots) */
+.ks-hp-field {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  position: absolute !important;
+  left: -9999px !important;
+}
+
+/* Checkbox & GDPR */
+.ks-checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 15px;
+  color: var(--mcd-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.ks-checkbox-label input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  accent-color: var(--mcd-red);
+  cursor: pointer;
+}
+
+.ks-link {
+  color: var(--mcd-red);
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* Submit Button */
+.ks-submit-btn {
+  width: 100%;
+  padding: 16px 28px;
+  background: linear-gradient(135deg, var(--mcd-red) 0%, #c41e12 100%);
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(218, 41, 28, 0.35);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.ks-submit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(218, 41, 28, 0.45);
+}
+
+.ks-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Notification Banners */
+.ks-alert {
+  padding: 16px 20px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.ks-alert-warning {
+  background-color: #fffbe6;
+  border: 1px solid #ffe58f;
+  color: #8c6b00;
+}
+
+.ks-alert-success {
+  background-color: #f6ffed;
+  border: 1px solid #b7eb8f;
+  color: #276749;
+}
+
+.ks-alert-error {
+  background-color: #fff2f0;
+  border: 1px solid #ffccc7;
+  color: #a8071a;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .ks-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .ks-form-container {
+    padding: 20px 16px;
+  }
+  .ks-positions-grid {
+    grid-template-columns: 1fr;
+  }
+}
