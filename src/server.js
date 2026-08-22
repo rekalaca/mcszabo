@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -16,6 +17,27 @@ const JWT_SECRET = process.env.JWT_SECRET || 'kisszabo_hr_secret_key_2026';
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Lazy DB init for requests
+let dbInitialized = false;
+let dbInitPromise = null;
+
+app.use(async (req, res, next) => {
+  try {
+    if (!dbInitialized) {
+      if (!dbInitPromise) {
+        dbInitPromise = initDatabase().then(() => {
+          dbInitialized = true;
+        });
+      }
+      await dbInitPromise;
+    }
+    next();
+  } catch (err) {
+    console.error('DB init middleware error:', err);
+    res.status(500).json({ error: 'Database init error: ' + err.message });
+  }
+});
 
 // Serve Static files for Embed script, Admin SPA and Pictures
 app.use('/embed', express.static(path.join(__dirname, '../public/embed')));
@@ -478,27 +500,6 @@ app.get('/api/admin/stats/export', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error exporting CSV:', error);
     res.status(500).json({ error: 'Hiba a CSV exportálásakor!' });
-  }
-});
-
-// Lazy DB init for Vercel serverless requests
-let dbInitialized = false;
-let dbInitPromise = null;
-
-app.use(async (req, res, next) => {
-  try {
-    if (!dbInitialized) {
-      if (!dbInitPromise) {
-        dbInitPromise = initDatabase().then(() => {
-          dbInitialized = true;
-        });
-      }
-      await dbInitPromise;
-    }
-    next();
-  } catch (err) {
-    console.error('DB init middleware error:', err);
-    res.status(500).json({ error: 'Database init error: ' + err.message, stack: err.stack });
   }
 });
 
