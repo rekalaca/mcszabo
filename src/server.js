@@ -481,22 +481,21 @@ app.get('/api/admin/stats/export', authenticateToken, async (req, res) => {
   }
 });
 
-// Lazy DB init for Vercel serverless requests
-let dbInitialized = false;
-let dbInitPromise = null;
-
 app.use(async (req, res, next) => {
-  if (!dbInitialized) {
-    if (!dbInitPromise) {
-      dbInitPromise = initDatabase().then(() => {
-        dbInitialized = true;
-      }).catch(err => {
-        console.error('Failed to initialize database on request:', err);
-      });
+  try {
+    if (!dbInitialized) {
+      if (!dbInitPromise) {
+        dbInitPromise = initDatabase().then(() => {
+          dbInitialized = true;
+        });
+      }
+      await dbInitPromise;
     }
-    await dbInitPromise;
+    next();
+  } catch (err) {
+    console.error('DB init middleware error:', err);
+    res.status(500).json({ error: 'Database init error: ' + err.message, stack: err.stack });
   }
-  next();
 });
 
 // Default redirect for root
