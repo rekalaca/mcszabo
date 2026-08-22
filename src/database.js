@@ -17,37 +17,114 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-const db = new sqlite3.Database(dbPath);
+let db = null;
+let useSqlJs = false;
+let SQL = null;
+let sqlJsDb = null;
 
-function runAsync(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function (err) {
-      if (err) reject(err);
-      else resolve(this);
-    });
-  });
+try {
+  const sqlite3 = require('sqlite3').verbose();
+  db = new sqlite3.Database(dbPath);
+} catch (e) {
+  console.warn('[DB NOTICE] Native sqlite3 binding unavailable, initializing sql.js WASM driver:', e.message);
+  useSqlJs = true;
 }
 
-function getAsync(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
-      if (err) reject(err);
-      else resolve(row);
-    });
-  });
+async function initSqlJs() {
+  if (!SQL) {
+    const initSqlJsLib = require('sql.js');
+    SQL = await initSqlJsLib();
+  }
+  if (!sqlJsDb) {
+    if (fs.existsSync(dbPath)) {
+      const filebuffer = fs.readFileSync(dbPath);
+      sqlJsDb = new SQL.Database(filebuffer);
+    } else {
+      sqlJsDb = new SQL.Database();
+    }
+  }
 }
 
-function allAsync(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows);
+function saveSqlJsDb() {
+  if (sqlJsDb && isVercel) {
+    try {
+      const data = sqlJsDb.export();
+      const buffer = Buffer.from(data);
+      fs.writeFileSync(dbPath, buffer);
+    } catch (e) {
+      console.error('[DB ERROR] Failed to write sql.js file:', e);
+    }
+  }
+}
+
+async function runAsync(sql, params = []) {
+  if (!useSqlJs && db) {
+    return new Promise((resolve, reject) => {
+      db.run(sql, params, function (err) {
+        if (err) reject(err);
+        else resolve(this);
+      });
     });
-  });
+  } else {
+    await initSqlJs();
+    sqlJsDb.run(sql, params);
+    saveSqlJsDb();
+    // Get last insert rowid if available
+    let lastID = 1;
+    try {
+      const res = sqlJsDb.exec("SELECT last_insert_rowid() as id");
+      if (res && res[0] && res[0].values && res[0].values[0]) {
+        lastID = res[0].values[0][0];
+      }
+    } catch(e) {}
+    return { lastID, changes: 1 };
+  }
+}
+
+async function getAsync(sql, params = []) {
+  if (!useSqlJs && db) {
+    return new Promise((resolve, reject) => {
+      db.get(sql, params, (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+  } else {
+    await initSqlJs();
+    const stmt = sqlJsDb.prepare(sql);
+    stmt.bind(params);
+    let row = null;
+    if (stmt.step()) {
+      row = stmt.getAsObject();
+    }
+    stmt.free();
+    return row;
+  }
+}
+
+async function allAsync(sql, params = []) {
+  if (!useSqlJs && db) {
+    return new Promise((resolve, reject) => {
+      db.all(sql, params, (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    });
+  } else {
+    await initSqlJs();
+    const stmt = sqlJsDb.prepare(sql);
+    stmt.bind(params);
+    const rows = [];
+    while (stmt.step()) {
+      rows.push(stmt.getAsObject());
+    }
+    stmt.free();
+    return rows;
+  }
 }
 
 async function initDatabase() {
-  db.serialize();
+  if (!useSqlJs && db) db.serialize();
 
   // Create Restaurants Table
   await runAsync(`
