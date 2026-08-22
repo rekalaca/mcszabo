@@ -230,12 +230,10 @@
 
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const alertBox = this.container.querySelector('#ks-alert-box');
         const submitBtn = this.container.querySelector('#ks-submit-btn');
 
-        alertBox.innerHTML = '';
         submitBtn.disabled = true;
-        submitBtn.innerHTML = `<span>Beküldés folyamatban...</span>`;
+        submitBtn.innerHTML = `<span>⏳ Beküldés folyamatban...</span>`;
 
         const formData = new FormData(form);
 
@@ -249,47 +247,93 @@
 
           if (response.status === 422 && result.duplicate) {
             // 48h Duplicate Submission Warning
-            alertBox.innerHTML = `
-              <div class="ks-alert ks-alert-warning">
-                ⚠️ <strong>Figyelem!</strong><br>
-                ${result.message}
-              </div>
-            `;
+            showKsModal(
+              'warning',
+              'Már beküldött jelentkezés!',
+              result.message || 'A megadott adatokkal már nemrég beküldte jelentkezését az adott étterembe és munkakörre. Kérjük válasszon másik munkakört vagy éttermet!'
+            );
             submitBtn.disabled = false;
             submitBtn.innerHTML = `<span>Jelentkezés beküldése</span>`;
             return;
           }
 
           if (!response.ok || !result.success) {
-            throw new Error(result.error || 'Hiba történt a beküldés során');
+            throw new Error(result.error || 'Hiba történt a jelentkezés beküldése során. Kérjük, próbálja újra!');
           }
 
-          // Success State
-          alertBox.innerHTML = `
-            <div class="ks-alert ks-alert-success">
-              ✅ <strong>Sikeres jelentkezés!</strong><br>
-              ${result.message}
-            </div>
-          `;
+          // Success Modal
+          showKsModal(
+            'success',
+            'Sikeres jelentkezés! 🎉',
+            `${result.message || 'Köszönjük jelentkezését! Rendkívül örülünk, hogy csapatunk tagja szeretne lenni.'}<br><br>📧 <em>Visszaigazoló e-mailt küldtünk a megadott e-mail címre, HR kollégánk pedig hamarosan keresni fogja!</em>`,
+            () => {
+              form.reset();
+              const display = document.getElementById('ks-file-name-display');
+              if (display) display.innerText = '';
+              positionsContainer.innerHTML = `<p style="font-size: 14px; color: #888; margin: 4px 0;">Először válasszon éttermet a nyitott pozíciók megjelenítéséhez!</p>`;
+              window.scrollTo({ top: this.container.offsetTop - 50, behavior: 'smooth' });
+            }
+          );
 
           form.reset();
-          document.getElementById('ks-file-name-display').innerText = '';
+          const display = document.getElementById('ks-file-name-display');
+          if (display) display.innerText = '';
           positionsContainer.innerHTML = `<p style="font-size: 14px; color: #888; margin: 4px 0;">Először válasszon éttermet a nyitott pozíciók megjelenítéséhez!</p>`;
 
           submitBtn.disabled = false;
           submitBtn.innerHTML = `<span>Jelentkezés beküldése</span>`;
 
         } catch (err) {
-          alertBox.innerHTML = `
-            <div class="ks-alert ks-alert-error">
-              ❌ ${err.message}
-            </div>
-          `;
+          showKsModal(
+            'error',
+            'Hiba a beküldéskor ❌',
+            err.message || 'Nem sikerült elküldeni a jelentkezést. Kérjük ellenőrizze az internetkapcsolatot vagy próbálja újra!'
+          );
           submitBtn.disabled = false;
           submitBtn.innerHTML = `<span>Jelentkezés beküldése</span>`;
         }
       });
     }
+  }
+
+  // Interactive Popup Modal Helper
+  function showKsModal(type, title, message, onClose) {
+    let modalOverlay = document.getElementById('ks-modal-overlay');
+    if (!modalOverlay) {
+      modalOverlay = document.createElement('div');
+      modalOverlay.id = 'ks-modal-overlay';
+      modalOverlay.className = 'ks-modal-overlay';
+      document.body.appendChild(modalOverlay);
+    }
+
+    const iconMap = {
+      success: '✓',
+      warning: '!',
+      error: '✕'
+    };
+
+    modalOverlay.className = `ks-modal-overlay ks-modal-${type} active`;
+    modalOverlay.innerHTML = `
+      <div class="ks-modal-card">
+        <div class="ks-modal-icon-wrap">
+          ${iconMap[type] || 'ℹ'}
+        </div>
+        <h3 class="ks-modal-title">${title}</h3>
+        <div class="ks-modal-body">${message}</div>
+        <button type="button" class="ks-modal-btn" id="ks-modal-close-btn">Rendben, köszönöm</button>
+      </div>
+    `;
+
+    const closeBtn = modalOverlay.querySelector('#ks-modal-close-btn');
+    const closeModal = () => {
+      modalOverlay.classList.remove('active');
+      if (onClose) onClose();
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) closeModal();
+    });
   }
 
   // Global helper to show simple GDPR modal if clicked

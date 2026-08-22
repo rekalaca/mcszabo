@@ -236,6 +236,15 @@
   }
 
   document.getElementById('apply-filters-btn').addEventListener('click', loadApplications);
+  const refreshAppsBtn = document.getElementById('refresh-applications-btn');
+  if (refreshAppsBtn) {
+    refreshAppsBtn.addEventListener('click', () => {
+      refreshAppsBtn.innerText = '⏳ Frissítés...';
+      loadApplications().finally(() => {
+        setTimeout(() => { refreshAppsBtn.innerText = '🔄 Frissítés'; }, 400);
+      });
+    });
+  }
   document.getElementById('filter-search').addEventListener('keyup', (e) => {
     if (e.key === 'Enter') loadApplications();
   });

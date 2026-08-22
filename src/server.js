@@ -43,7 +43,6 @@ app.use(async (req, res, next) => {
 app.use('/embed', express.static(path.join(__dirname, '../public/embed')));
 app.use('/admin', express.static(path.join(__dirname, '../public/admin')));
 app.use('/pictures', express.static(path.join(__dirname, '../public/pictures')));
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 const os = require('os');
 const isVercel = process.env.VERCEL === '1' || Boolean(process.env.VERCEL_ENV);
@@ -56,6 +55,46 @@ const uploadDir = isVercel
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
+
+// Dynamic CV Delivery Endpoint (works on Vercel serverless and local disk)
+app.get(['/uploads/:filename', '/api/admin/cv/:id', '/api/admin/cv/file/:filename'], async (req, res) => {
+  try {
+    const { filename, id } = req.params;
+    let appRecord = null;
+    
+    if (id && !isNaN(parseInt(id, 10))) {
+      appRecord = await getAsync('SELECT cv_filename, cv_original_name, cv_mimetype, cv_data FROM applications WHERE id = ?', [parseInt(id, 10)]);
+    } else if (filename) {
+      appRecord = await getAsync('SELECT cv_filename, cv_original_name, cv_mimetype, cv_data FROM applications WHERE cv_filename = ?', [filename]);
+    }
+
+    const targetFilename = filename || (appRecord ? appRecord.cv_filename : '');
+    const diskPath = path.join(uploadDir, targetFilename);
+    const localFallbackPath = path.join(__dirname, '../uploads', targetFilename);
+
+    if (fs.existsSync(diskPath)) {
+      return res.sendFile(diskPath);
+    }
+    if (fs.existsSync(localFallbackPath)) {
+      return res.sendFile(localFallbackPath);
+    }
+
+    if (appRecord && appRecord.cv_data) {
+      const fileBuffer = Buffer.from(appRecord.cv_data, 'base64');
+      const mimeType = appRecord.cv_mimetype || 'application/pdf';
+      const originalName = appRecord.cv_original_name || 'oneletrajz.pdf';
+      
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(originalName)}"`);
+      return res.send(fileBuffer);
+    }
+
+    return res.status(404).send('Önéletrajz fájl nem található.');
+  } catch (err) {
+    console.error('Error delivering CV:', err);
+    res.status(500).send('Hiba történt a fájl megnyitásakor.');
+  }
+});
 
 // Multer Storage Configuration for CV Files
 const storage = multer.diskStorage({
@@ -112,6 +151,9 @@ if (smtpHost && smtpUser && smtpPass) {
     auth: {
       user: smtpUser,
       pass: smtpPass
+    },
+    tls: {
+      rejectUnauthorized: false
     }
   });
   console.log(`[SMTP CONFIG] Transporter initialized for ${smtpUser} via ${smtpHost}:${smtpPort}`);
@@ -255,13 +297,26 @@ app.post('/api/public/apply', upload.single('cv'), async (req, res) => {
       });
     }
 
-    // D) Save to Database
+    // D) Extract CV file content as Base64 for persistent cloud storage
+    let cvData = '';
+    let cvMime = req.file.mimetype || 'application/pdf';
+    try {
+      if (req.file.path && fs.existsSync(req.file.path)) {
+        cvData = fs.readFileSync(req.file.path).toString('base64');
+      } else if (req.file.buffer) {
+        cvData = req.file.buffer.toString('base64');
+      }
+    } catch (e) {
+      console.warn('[CV STORAGE] Failed reading file buffer:', e.message);
+    }
+
+    // Save to Database
     const result = await runAsync(
       `INSERT INTO applications (
         form_type, full_name, email, phone, birth_year, address,
         restaurant_id, position_id, education_level, is_student,
-        cv_filename, cv_original_name
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        cv_filename, cv_original_name, cv_mimetype, cv_data
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         form_type,
         cleanName,
@@ -274,7 +329,9 @@ app.post('/api/public/apply', upload.single('cv'), async (req, res) => {
         education_level,
         is_student === 'true' || is_student === '1' || is_student === true ? 1 : 0,
         req.file.filename,
-        req.file.originalname
+        req.file.originalname,
+        cvMime,
+        cvData
       ]
     );
 
@@ -282,8 +339,12 @@ app.post('/api/public/apply', upload.single('cv'), async (req, res) => {
     const restaurant = await getAsync(`SELECT name FROM restaurants WHERE id = ?`, [restaurant_id]);
     const position = await getAsync(`SELECT title FROM positions WHERE id = ?`, [position_id]);
 
-    // Send Auto-reply email asynchronously
-    sendAutoReplyEmail(cleanEmail, cleanName, position ? position.title : '', restaurant ? restaurant.name : '');
+    // Send Auto-reply email (awaiting on serverless to ensure delivery)
+    try {
+      await sendAutoReplyEmail(cleanEmail, cleanName, position ? position.title : '', restaurant ? restaurant.name : '');
+    } catch (emailErr) {
+      console.error('[EMAIL ERROR] Non-blocking email sending error:', emailErr.message);
+    }
 
     res.json({
       success: true,

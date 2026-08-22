@@ -282,9 +282,14 @@ async function initDatabase() {
         is_student INTEGER DEFAULT 0,
         cv_filename TEXT NOT NULL,
         cv_original_name TEXT NOT NULL,
+        cv_mimetype TEXT DEFAULT 'application/pdf',
+        cv_data TEXT,
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         status TEXT DEFAULT 'uj'
       );
+
+      ALTER TABLE applications ADD COLUMN IF NOT EXISTS cv_data TEXT;
+      ALTER TABLE applications ADD COLUMN IF NOT EXISTS cv_mimetype TEXT DEFAULT 'application/pdf';
 
       CREATE TABLE IF NOT EXISTS admin_users (
         id SERIAL PRIMARY KEY,
