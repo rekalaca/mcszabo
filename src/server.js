@@ -148,8 +148,6 @@ if (smtpHost && smtpUser && smtpPass) {
     host: smtpHost,
     port: smtpPort,
     secure: smtpSecure, // true for 465, false for 587/25
-    pool: true,
-    maxConnections: 3,
     auth: {
       user: smtpUser,
       pass: smtpPass
@@ -158,11 +156,12 @@ if (smtpHost && smtpUser && smtpPass) {
       rejectUnauthorized: false
     }
   });
-  console.log(`[SMTP CONFIG] Transporter initialized for ${smtpUser} via ${smtpHost}:${smtpPort} (pooled)`);
+  console.log(`[SMTP CONFIG] Transporter initialized for ${smtpUser} via ${smtpHost}:${smtpPort}`);
 }
 
 async function sendAutoReplyEmail(toEmail, applicantName, positionTitle, restaurantName) {
   const subject = `Köszönjük jelentkezését - KisSzabó Kft. (${restaurantName})`;
+  const plainText = `Kedves ${applicantName}!\n\nKöszönjük, hogy jelentkeztél a(z) ${restaurantName} éttermünkbe a(z) ${positionTitle} munkakörre!\n\nJelentkezésedet sikeresen rögzítettük rendszerünkben. HR kollégánk hamarosan feldolgozza az adataidat és felveszi veled a kapcsolatot.\n\nÜdvözlettel,\nKisSzabó Kft. HR Csapat`;
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
       <div style="text-align: center; margin-bottom: 20px;">
@@ -181,13 +180,14 @@ async function sendAutoReplyEmail(toEmail, applicantName, positionTitle, restaur
 
   if (transporter) {
     try {
-      await transporter.sendMail({
+      const info = await transporter.sendMail({
         from: `"KisSzabó Kft. Karrier" <${smtpUser}>`,
         to: toEmail,
         subject,
+        text: plainText,
         html: htmlContent
       });
-      console.log(`[EMAIL SENT] Auto-reply sent to ${toEmail}`);
+      console.log(`[EMAIL SENT] Auto-reply sent to ${toEmail}: ${info.messageId}`);
     } catch (error) {
       console.error(`[EMAIL ERROR] Failed to send email to ${toEmail}:`, error.message);
     }
@@ -341,11 +341,9 @@ app.post('/api/public/apply', upload.single('cv'), async (req, res) => {
     const restaurant = await getAsync(`SELECT name FROM restaurants WHERE id = ?`, [restaurant_id]);
     const position = await getAsync(`SELECT title FROM positions WHERE id = ?`, [position_id]);
 
-    // Send Auto-reply email with fast timeout race to ensure snappy form response
+    // Send Auto-reply email (directly awaited to ensure delivery before serverless freeze)
     try {
-      const emailPromise = sendAutoReplyEmail(cleanEmail, cleanName, position ? position.title : '', restaurant ? restaurant.name : '');
-      const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 2500));
-      await Promise.race([emailPromise, timeoutPromise]);
+      await sendAutoReplyEmail(cleanEmail, cleanName, position ? position.title : '', restaurant ? restaurant.name : '');
     } catch (emailErr) {
       console.error('[EMAIL ERROR] Non-blocking email sending error:', emailErr.message);
     }
