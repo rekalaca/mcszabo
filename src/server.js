@@ -481,6 +481,10 @@ app.get('/api/admin/stats/export', authenticateToken, async (req, res) => {
   }
 });
 
+// Lazy DB init for Vercel serverless requests
+let dbInitialized = false;
+let dbInitPromise = null;
+
 app.use(async (req, res, next) => {
   try {
     if (!dbInitialized) {
