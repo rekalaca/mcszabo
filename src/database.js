@@ -14,8 +14,8 @@ if (!fs.existsSync(dataDir)) {
 }
 
 let db = null;
-let useSqlJs = isVercel;
-let useMemoryStore = false;
+let useSqlJs = false;
+let useMemoryStore = isVercel;
 let SQL = null;
 let sqlJsDb = null;
 
