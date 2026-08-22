@@ -206,61 +206,184 @@
   function renderApplicationsTable(applications) {
     const tbody = document.querySelector('#applications-table tbody');
     if (applications.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #888; padding: 30px;">Nincs a szűrésnek megfelelő jelentkezés.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #888; padding: 30px; font-family: 'Montserrat', sans-serif;">Nincs a szűrésnek megfelelő jelentkezés.</td></tr>`;
       return;
     }
 
     tbody.innerHTML = applications.map(a => {
-      const dateStr = new Date(a.created_at).toLocaleString('hu-HU');
+      const d = new Date(a.created_at);
+      const datePart = d.toLocaleDateString('hu-HU', { year: 'numeric', month: '2-digit', day: '2-digit' });
+      const timePart = d.toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       const formBadge = a.form_type === 'disability' 
         ? `<span class="badge disability">Megváltozott</span>` 
         : `<span class="badge standard">Normál</span>`;
 
+      const isIntezve = a.status === 'intezve';
+      const rowClass = isIntezve ? 'app-row-handled' : 'app-row-pending';
+      const cleanPhone = (a.phone || '').replace(/[^0-9+]/g, '');
+
       return `
-        <tr>
-          <td style="white-space: nowrap; font-size: 13px;">${dateStr}<br>${formBadge}</td>
-          <td><strong>${escapeHtml(a.full_name)}</strong><br><span style="font-size: 12px; color: #666;">Szül: ${a.birth_year}</span></td>
+        <tr class="${rowClass}" id="app-row-${a.id}">
+          <td style="white-space: nowrap; font-size: 13px; width: 110px;">
+            <strong>${datePart}</strong><br>
+            <span style="color: #666; font-size: 12px;">${timePart}</span><br>
+            ${formBadge}
+          </td>
+          <td>
+            <strong>${escapeHtml(a.full_name)}</strong><br>
+            <span style="font-size: 12px; color: #666;">Szül: ${a.birth_year}</span>
+          </td>
           <td>${escapeHtml(a.restaurant_name)}</td>
           <td><strong>${escapeHtml(a.position_title)}</strong></td>
-          <td style="font-size: 13px;">📧 ${escapeHtml(a.email)}<br>📞 ${escapeHtml(a.phone)}</td>
-          <td style="font-size: 13px;">${escapeHtml(a.education_level)}</td>
+          <td style="font-size: 13px;">
+            <a href="mailto:${encodeURIComponent(a.email)}" class="admin-contact-link" title="Email küldése levelezőprogrammal">📧 ${escapeHtml(a.email)}</a><br>
+            <a href="tel:${cleanPhone}" class="admin-contact-link" title="Hívás indítása telefonon">📞 ${escapeHtml(a.phone)}</a>
+          </td>
+          <td style="font-size: 13px; max-width: 140px; word-break: break-word; line-height: 1.3;">
+            ${escapeHtml(a.education_level)}
+          </td>
           <td style="text-align: center;">${a.is_student ? '✅ Igen' : '❌ Nem'}</td>
-          <td style="white-space: nowrap;">
+          <td style="white-space: nowrap; width: 180px;">
             <div style="display: flex; gap: 6px; align-items: center;">
-              <a href="/uploads/${a.cv_filename}" target="_blank" class="admin-btn secondary" style="padding: 4px 8px; font-size: 12px; text-decoration: none;" title="Önéletrajz megnyitása">
-                📥 CV
+              <a href="/uploads/${a.cv_filename}" target="_blank" class="admin-btn secondary" style="padding: 5px 9px; font-size: 12px; text-decoration: none;" title="Önéletrajz megnyitása">
+                📄 Önéletrajz
               </a>
-              <button onclick="window.deleteApplication(${a.id}, '${escapeHtml(a.full_name)}')" class="admin-btn" style="background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 4px 8px; font-size: 12px;" title="Jelentkezés törlése">
+              <button onclick="window.confirmDeleteApplication(${a.id}, '${escapeHtml(a.full_name)}')" class="admin-btn" style="background-color: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 5px 9px; font-size: 12px;" title="Jelentkezés törlése">
                 🗑️ Törlés
               </button>
             </div>
+          </td>
+          <td style="text-align: center; width: 100px;">
+            <label class="status-toggle-wrap" title="Kattintson az állapot módosításához">
+              <input type="checkbox" ${isIntezve ? 'checked' : ''} onchange="window.toggleApplicationStatus(${a.id}, this.checked)">
+              <span class="status-badge-chip ${isIntezve ? 'handled' : 'pending'}" id="status-chip-${a.id}">
+                ${isIntezve ? 'Intézve' : 'Új'}
+              </span>
+            </label>
           </td>
         </tr>
       `;
     }).join('');
   }
 
-  // Global Delete Handler
-  window.deleteApplication = async function(id, name) {
-    if (!confirm(`Biztosan véglegesen törölni szeretné ${name || 'ezt a'} jelentkezést?`)) {
-      return;
+  // Toggle Application Handled/Pending Status
+  window.toggleApplicationStatus = async function(id, isChecked) {
+    const newStatus = isChecked ? 'intezve' : 'uj';
+    const row = document.getElementById(`app-row-${id}`);
+    const chip = document.getElementById(`status-chip-${id}`);
+
+    if (row) {
+      row.className = isChecked ? 'app-row-handled' : 'app-row-pending';
+    }
+    if (chip) {
+      chip.className = `status-badge-chip ${isChecked ? 'handled' : 'pending'}`;
+      chip.innerText = isChecked ? 'Intézve' : 'Új';
     }
 
     try {
-      const res = await fetch(`/api/admin/applications/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
+      const res = await fetch(`/api/admin/applications/${id}/status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
       });
       const data = await res.json();
-      if (res.ok && data.success) {
+      if (!res.ok || !data.success) {
+        showAdminAlertModal({ type: 'error', title: 'Hiba', message: data.error || 'Nem sikerült az állapot mentése!' });
         loadApplications();
-        if (typeof loadStats === 'function') loadStats();
-      } else {
-        alert(data.error || 'Hiba történt a törlés során!');
       }
     } catch (err) {
-      alert('Hálózati hiba a törlés során: ' + err.message);
+      showAdminAlertModal({ type: 'error', title: 'Hálózati hiba', message: err.message });
+      loadApplications();
     }
+  };
+
+  // Delete Application Confirmation with Montserrat Custom Modal
+  window.confirmDeleteApplication = function(id, name) {
+    showAdminConfirmModal({
+      title: 'Jelentkezés törlése',
+      message: `Biztosan véglegesen törölni szeretné <strong>${name || 'ezt a'}</strong> jelentkezést az adatbázisból?`,
+      confirmText: '🗑️ Igen, törlöm',
+      cancelText: 'Mégse',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/admin/applications/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            loadApplications();
+            if (typeof loadStats === 'function') loadStats();
+            showAdminAlertModal({ type: 'success', title: 'Sikeres törlés', message: 'A jelentkezés sikeresen el lett távolítva.' });
+          } else {
+            showAdminAlertModal({ type: 'error', title: 'Hiba történt', message: data.error || 'Nem sikerült törölni a jelentkezést!' });
+          }
+        } catch (err) {
+          showAdminAlertModal({ type: 'error', title: 'Hiba', message: 'Hálózati hiba a törlés során: ' + err.message });
+        }
+      }
+    });
+  };
+
+  // Custom Admin Modal Handlers (Montserrat Typography)
+  window.showAdminConfirmModal = function({ title, message, confirmText = 'Igen', cancelText = 'Mégse', onConfirm }) {
+    const overlay = document.getElementById('admin-modal-overlay');
+    const icon = document.getElementById('admin-modal-icon');
+    const titleEl = document.getElementById('admin-modal-title');
+    const bodyEl = document.getElementById('admin-modal-body');
+    const actionsEl = document.getElementById('admin-modal-actions');
+
+    if (!overlay) return;
+
+    icon.className = 'admin-modal-icon-wrap danger';
+    icon.innerText = '🗑️';
+    titleEl.innerText = title;
+    bodyEl.innerHTML = message;
+
+    actionsEl.innerHTML = `
+      <button class="admin-modal-btn cancel" id="admin-modal-cancel-btn">${cancelText}</button>
+      <button class="admin-modal-btn danger" id="admin-modal-confirm-btn">${confirmText}</button>
+    `;
+
+    overlay.classList.add('active');
+
+    const close = () => overlay.classList.remove('active');
+    document.getElementById('admin-modal-cancel-btn').onclick = close;
+    document.getElementById('admin-modal-confirm-btn').onclick = () => {
+      close();
+      if (onConfirm) onConfirm();
+    };
+  };
+
+  window.showAdminAlertModal = function({ type = 'success', title, message, buttonText = 'Rendben', onClose }) {
+    const overlay = document.getElementById('admin-modal-overlay');
+    const icon = document.getElementById('admin-modal-icon');
+    const titleEl = document.getElementById('admin-modal-title');
+    const bodyEl = document.getElementById('admin-modal-body');
+    const actionsEl = document.getElementById('admin-modal-actions');
+
+    if (!overlay) return;
+
+    icon.className = `admin-modal-icon-wrap ${type}`;
+    icon.innerText = type === 'success' ? '✓' : (type === 'error' ? '✕' : 'ℹ');
+    titleEl.innerText = title;
+    bodyEl.innerHTML = message;
+
+    actionsEl.innerHTML = `
+      <button class="admin-modal-btn primary" id="admin-modal-ok-btn">${buttonText}</button>
+    `;
+
+    overlay.classList.add('active');
+
+    const close = () => {
+      overlay.classList.remove('active');
+      if (onClose) onClose();
+    };
+
+    document.getElementById('admin-modal-ok-btn').onclick = close;
   };
 
   document.getElementById('apply-filters-btn').addEventListener('click', loadApplications);
@@ -287,27 +410,35 @@
       });
       const stats = await response.json();
 
-      // Top Stats Cards
-      const totalAll = stats.monthlySummary.reduce((acc, curr) => acc + curr.total_count, 0);
+      // Top Stats Cards Calculation
+      const monthly = stats.monthlySummary || [];
+      const restaurants = stats.restaurantSummary || [];
+      const positions = stats.positionSummary || [];
+
+      const totalAll = monthly.reduce((acc, curr) => acc + parseInt(curr.total_count || 0, 10), 0);
       document.getElementById('stat-total-count').innerText = totalAll;
 
-      const topRest = stats.restaurantSummary[0];
-      document.getElementById('stat-top-restaurant').innerText = topRest && topRest.count > 0 ? `${topRest.restaurant_name} (${topRest.count})` : '-';
+      const topRest = restaurants.find(r => parseInt(r.count, 10) > 0) || restaurants[0];
+      document.getElementById('stat-top-restaurant').innerText = topRest && parseInt(topRest.count, 10) > 0 
+        ? `${topRest.restaurant_name} (${topRest.count})` 
+        : '-';
 
-      const topPos = stats.positionSummary[0];
-      document.getElementById('stat-top-position').innerText = topPos && topPos.count > 0 ? `${topPos.position_title} (${topPos.count})` : '-';
+      const topPos = positions.find(p => parseInt(p.count, 10) > 0) || positions[0];
+      document.getElementById('stat-top-position').innerText = topPos && parseInt(topPos.count, 10) > 0 
+        ? `${topPos.position_title} (${topPos.count})` 
+        : '-';
 
       // Render Monthly Stats Table
       const monthlyTbody = document.querySelector('#monthly-stats-table tbody');
-      if (stats.monthlySummary.length === 0) {
-        monthlyTbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #888;">Még nem érkeztek jelentkezések.</td></tr>`;
+      if (monthly.length === 0) {
+        monthlyTbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #888; padding: 20px;">Még nem érkeztek jelentkezések.</td></tr>`;
       } else {
-        monthlyTbody.innerHTML = stats.monthlySummary.map(m => `
+        monthlyTbody.innerHTML = monthly.map(m => `
           <tr>
             <td><strong>${m.month}</strong></td>
-            <td>${m.standard_count}</td>
-            <td>${m.disability_count}</td>
-            <td><strong>${m.total_count}</strong></td>
+            <td>${m.standard_count || 0}</td>
+            <td>${m.disability_count || 0}</td>
+            <td><strong>${m.total_count || 0}</strong></td>
             <td>
               <button class="admin-btn secondary" style="padding: 4px 10px; font-size: 12px;" onclick="window.downloadCSV('${m.month}')">
                 📥 CSV Letöltés
@@ -319,10 +450,10 @@
 
       // Render Restaurant Stats Table
       const restTbody = document.querySelector('#restaurant-stats-table tbody');
-      restTbody.innerHTML = stats.restaurantSummary.map(r => `
+      restTbody.innerHTML = restaurants.map(r => `
         <tr>
           <td>${escapeHtml(r.restaurant_name)}</td>
-          <td><strong>${r.count} fő</strong></td>
+          <td><strong>${r.count || 0} fő</strong></td>
         </tr>
       `).join('');
 

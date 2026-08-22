@@ -148,6 +148,8 @@ if (smtpHost && smtpUser && smtpPass) {
     host: smtpHost,
     port: smtpPort,
     secure: smtpSecure, // true for 465, false for 587/25
+    pool: true,
+    maxConnections: 3,
     auth: {
       user: smtpUser,
       pass: smtpPass
@@ -156,7 +158,7 @@ if (smtpHost && smtpUser && smtpPass) {
       rejectUnauthorized: false
     }
   });
-  console.log(`[SMTP CONFIG] Transporter initialized for ${smtpUser} via ${smtpHost}:${smtpPort}`);
+  console.log(`[SMTP CONFIG] Transporter initialized for ${smtpUser} via ${smtpHost}:${smtpPort} (pooled)`);
 }
 
 async function sendAutoReplyEmail(toEmail, applicantName, positionTitle, restaurantName) {
@@ -339,9 +341,11 @@ app.post('/api/public/apply', upload.single('cv'), async (req, res) => {
     const restaurant = await getAsync(`SELECT name FROM restaurants WHERE id = ?`, [restaurant_id]);
     const position = await getAsync(`SELECT title FROM positions WHERE id = ?`, [position_id]);
 
-    // Send Auto-reply email (awaiting on serverless to ensure delivery)
+    // Send Auto-reply email with fast timeout race to ensure snappy form response
     try {
-      await sendAutoReplyEmail(cleanEmail, cleanName, position ? position.title : '', restaurant ? restaurant.name : '');
+      const emailPromise = sendAutoReplyEmail(cleanEmail, cleanName, position ? position.title : '', restaurant ? restaurant.name : '');
+      const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 2500));
+      await Promise.race([emailPromise, timeoutPromise]);
     } catch (emailErr) {
       console.error('[EMAIL ERROR] Non-blocking email sending error:', emailErr.message);
     }
@@ -502,6 +506,20 @@ app.delete('/api/admin/applications/:id', authenticateToken, async (req, res) =>
   }
 });
 
+// Update Application Status (Protected)
+app.post(['/api/admin/applications/:id/status', '/api/admin/applications/:id/toggle-status'], authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  const newStatus = status === 'intezve' ? 'intezve' : 'uj';
+  try {
+    await runAsync(`UPDATE applications SET status = ? WHERE id = ?`, [newStatus, parseInt(id, 10)]);
+    res.json({ success: true, status: newStatus });
+  } catch (error) {
+    console.error('Error updating application status:', error);
+    res.status(500).json({ error: 'Hiba az állapot módosításakor!' });
+  }
+});
+
 // Monthly Statistics Aggregation
 app.get('/api/admin/stats', authenticateToken, async (req, res) => {
   try {
@@ -512,8 +530,8 @@ app.get('/api/admin/stats', authenticateToken, async (req, res) => {
         SUM(CASE WHEN form_type = 'standard' THEN 1 ELSE 0 END) as standard_count,
         SUM(CASE WHEN form_type = 'disability' THEN 1 ELSE 0 END) as disability_count
       FROM applications
-      GROUP BY month
-      ORDER BY month DESC
+      GROUP BY 1
+      ORDER BY 1 DESC
     `);
 
     const restaurantSummary = await allAsync(`
@@ -522,7 +540,7 @@ app.get('/api/admin/stats', authenticateToken, async (req, res) => {
         COUNT(a.id) as count
       FROM restaurants r
       LEFT JOIN applications a ON r.id = a.restaurant_id
-      GROUP BY r.id
+      GROUP BY r.id, r.name
       ORDER BY count DESC
     `);
 
@@ -532,14 +550,14 @@ app.get('/api/admin/stats', authenticateToken, async (req, res) => {
         COUNT(a.id) as count
       FROM positions p
       LEFT JOIN applications a ON p.id = a.position_id
-      GROUP BY p.id
+      GROUP BY p.id, p.title
       ORDER BY count DESC
     `);
 
     res.json({
-      monthlySummary,
-      restaurantSummary,
-      positionSummary
+      monthlySummary: monthlySummary || [],
+      restaurantSummary: restaurantSummary || [],
+      positionSummary: positionSummary || []
     });
   } catch (error) {
     console.error('Error fetching statistics:', error);

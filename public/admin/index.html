@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Adminisztrációs Portál - KisSzabó Kft. HR</title>
   <link rel="stylesheet" href="/admin/admin.css">
-  <link href="https://fonts.googleapis.com/css2?family=Cardo:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cardo:ital,wght@0,400;0,700;1,400;1,700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -130,14 +130,15 @@
             <table class="admin-table" id="applications-table">
               <thead>
                 <tr>
-                  <th>Időpont</th>
+                  <th style="width: 110px;">Időpont</th>
                   <th>Név</th>
                   <th>Étterem</th>
                   <th>Munkakör</th>
                   <th>Elérhetőség</th>
-                  <th>Végzettség</th>
-                  <th>Diák?</th>
-                  <th>Műveletek</th>
+                  <th style="max-width: 140px;">Végzettség</th>
+                  <th style="text-align: center; width: 70px;">Diák?</th>
+                  <th style="width: 180px;">Műveletek</th>
+                  <th style="text-align: center; width: 100px;">Intézve</th>
                 </tr>
               </thead>
               <tbody>
@@ -225,7 +226,7 @@
           <pre class="code-block"><code id="code-snippet-standard">&lt;!-- KisSzabó Kft. Normál Jelentkezési Form --&gt;
 &lt;div id="kisszabo-job-form" data-form-type="standard"&gt;&lt;/div&gt;
 &lt;script src="http://localhost:3000/embed/kisszabo-form.js"&gt;&lt;/script&gt;</code></pre>
-          <button class="admin-btn secondary" onclick="navigator.clipboard.writeText(document.getElementById('code-snippet-standard').innerText); alert('Kód másolva!');">📋 Kód Másolása</button>
+          <button class="admin-btn secondary" onclick="navigator.clipboard.writeText(document.getElementById('code-snippet-standard').innerText); showAdminAlertModal({ type: 'success', title: 'Sikeres másolás', message: 'A beágyazási kód a vágólapra másolva!' });">📋 Kód Másolása</button>
         </div>
 
         <div class="card shadow" style="margin-top: 24px;">
@@ -234,10 +235,22 @@
           <pre class="code-block"><code id="code-snippet-disability">&lt;!-- KisSzabó Kft. Megváltozott Munkaképességű Form --&gt;
 &lt;div id="kisszabo-job-form" data-form-type="disability"&gt;&lt;/div&gt;
 &lt;script src="http://localhost:3000/embed/kisszabo-form.js"&gt;&lt;/script&gt;</code></pre>
-          <button class="admin-btn secondary" onclick="navigator.clipboard.writeText(document.getElementById('code-snippet-disability').innerText); alert('Kód másolva!');">📋 Kód Másolása</button>
+          <button class="admin-btn secondary" onclick="navigator.clipboard.writeText(document.getElementById('code-snippet-disability').innerText); showAdminAlertModal({ type: 'success', title: 'Sikeres másolás', message: 'A beágyazási kód a vágólapra másolva!' });">📋 Kód Másolása</button>
         </div>
       </section>
     </main>
+  </div>
+
+  <!-- ADMIN CUSTOM MODAL (MONTSERRAT TYPOGRAPHY) -->
+  <div id="admin-modal-overlay" class="admin-modal-overlay">
+    <div class="admin-modal-card">
+      <div class="admin-modal-icon-wrap" id="admin-modal-icon">⚠️</div>
+      <h3 class="admin-modal-title" id="admin-modal-title">Megerősítés szükséges</h3>
+      <div class="admin-modal-body" id="admin-modal-body">Biztosan végrehajtja ezt a műveletet?</div>
+      <div class="admin-modal-actions" id="admin-modal-actions">
+        <!-- Buttons injected dynamically -->
+      </div>
+    </div>
   </div>
 
   <script src="/admin/admin.js"></script>

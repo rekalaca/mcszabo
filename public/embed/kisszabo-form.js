@@ -264,7 +264,7 @@
           // Success Modal
           showKsModal(
             'success',
-            'Sikeres jelentkezés! 🎉',
+            'Sikeres jelentkezés!',
             `${result.message || 'Köszönjük jelentkezését! Rendkívül örülünk, hogy csapatunk tagja szeretne lenni.'}<br><br>📧 <em>Visszaigazoló e-mailt küldtünk a megadott e-mail címre, HR kollégánk pedig hamarosan keresni fogja!</em>`,
             () => {
               form.reset();
