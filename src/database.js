@@ -296,6 +296,13 @@ async function initDatabase() {
         username TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL
       );
+
+      -- Enable Row Level Security (RLS) to protect against unauthorized Supabase REST API access
+      ALTER TABLE restaurants ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE positions ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE restaurant_positions ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE applications ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
     `);
 
     // Seed initial restaurants
